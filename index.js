@@ -11,16 +11,23 @@ const fetch = (...args) => import('node-fetch').then(({default: fetch}) => fetch
 
 const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY;
 
+const currentYear = new Date().getFullYear();
+
 const systemPrompt = `
 You are a SQL expert. You query a SQLite database with the following table:
 
 Table: enrolments
 Columns:
 - id INTEGER
-- year INTEGER (ranges from 2020 to 2025)
+- year INTEGER (ranges from ${currentYear - 5} to ${currentYear})
 - programme TEXT (e.g. 'Computer Science', 'Nursing', 'Law')
 - faculty TEXT (one of: 'Science', 'Arts', 'Business', 'Engineering', 'Law', 'Health')
 - student_count INTEGER
+
+The current year is ${currentYear}.
+When the user says "this year" use ${currentYear}.
+When the user says "last 5 years" use years ${currentYear - 5} to ${currentYear}.
+When the user says "last year" use ${currentYear - 1}.
 
 Example queries:
 - Total students per faculty: SELECT faculty, SUM(student_count) as total FROM enrolments GROUP BY faculty
