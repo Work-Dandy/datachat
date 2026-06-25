@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Uni Enrolments</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: Arial, sans-serif; background: #f5f5f5; padding: 20px; }
+    h1 { margin-bottom: 20px; color: #2c3e50; }
+    #chat { max-width: 900px; margin: 0 auto; }
+    #messages { background: white; border-radius: 8px; padding: 20px; min-height: 300px; margin-bottom: 15px; box-shadow: 0 2px 6px rgba(0,0,0,0.08); }
+    .message { margin-bottom: 15px; }
+    .message.user { color: #2980b9; font-weight: bold; }
+    .message.assistant { color: #333; }
+    table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+    th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+    th { background: #2c3e50; color: white; }
+    tr:nth-child(even) { background: #f9f9f9; }
+    #inputArea { display: flex; gap: 10px; }
+    #userInput { flex: 1; padding: 10px; border: 1px solid #ddd; border-radius: 6px; font-size: 15px; }
+    button { padding: 10px 20px; background: #2c3e50; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 15px; }
+    button:hover { background: #34495e; }
+    canvas { margin-top: 15px; }
+  </style>
+</head>
+<body>
+  <div id="chat">
+    <h1>Uni Enrolments Chat</h1>
+    <div id="messages"></div>
+    <div id="inputArea">
+      <input type="text" id="userInput" placeholder="Ask a question about enrolments..." />
+      <button onclick="sendMessage()">Send</button>
+    </div>
+  </div>
+
+  <script>
+    let history = [];
+    let chartInstance = null;
+
+    async function sendMessage() {
+      const input = document.getElementById('userInput');
+      const message = input.value.trim();
+      if (!message) return;
+      input.value = '';
+
+      addMessage('user', message);
+
+      const res = await fetch('/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message, history })
+      });
+
+      const data = await res.json();
+      history = data.history;
+
+      addMessage('assistant', data.results);
+    }
+
+    function addMessage(role, content) {
+      const messages = document.getElementById('messages');
+      const div = document.createElement('div');
+      div.className = `message ${role}`;
+
+      if (role === 'user') {
+        div.textContent = `You: ${content}`;
+      } else {
+        if (content.length === 0) {
+          div.textContent = 'No results found.';
+        } else {
+          // Render table
+          div.appendChild(renderTable(content));
+
+          // Render chart if data has 2 columns
+          const keys = Object.keys(content[0]);
+          if (keys.length === 2) {
+            const canvas = document.createElement('canvas');
+            div.appendChild(canvas);
+            renderChart(canvas, content, keys);
+          }
+        }
+      }
+
+      messages.appendChild(div);
+      messages.scrollTop = messages.scrollHeight;
+    }
+
+    function renderTable(results) {
+      const table = document.createElement('table');
+      const headers = Object.keys(results[0]);
+
+      const thead = document.createElement('thead');
+      const headerRow = document.createElement('tr');
+      headers.forEach(h => {
+        const th = document.createElement('th');
+        th.textContent = h;
+        headerRow.appendChild(th);
+      });
+      thead.appendChild(headerRow);
+      table.appendChild(thead);
+
+      const tbody = document.createElement('tbody');
+      results.forEach(row => {
+        const tr = document.createElement('tr');
+        headers.forEach(h => {
+          const td = document.createElement('td');
+          td.textContent = row[h];
+          tr.appendChild(td);
+        });
+        tbody.appendChild(tr);
+      });
+      table.appendChild(tbody);
+
+      return table;
+    }
+
+    function renderChart(canvas, results, keys) {
+      if (chartInstance) chartInstance.destroy();
+      chartInstance = new Chart(canvas, {
+        type: 'bar',
+        data: {
+          labels: results.map(r => r[keys[0]]),
+          datasets: [{
+            label: keys[1],
+            data: results.map(r => r[keys[1]]),
+            backgroundColor: '#2c3e50'
+          }]
+        },
+        options: {
+          responsive: true,
+          plugins: { legend: { display: false } }
+        }
+      });
+    }
+
+    // Allow Enter key to send
+    document.getElementById('userInput').addEventListener('keypress', function(e) {
+      if (e.key === 'Enter') sendMessage();
+    });
+  </script>
+</body>
+</html>
