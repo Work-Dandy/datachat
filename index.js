@@ -122,7 +122,6 @@ const insert = db.prepare(`
   VALUES (?, ?, ?, ?)
 `);
 
-const currentYear = new Date().getFullYear();
 for (let year = currentYear - 5; year <= currentYear; year++) {
   for (const faculty of faculties) {
     for (const programme of programmes[faculty]) {
